@@ -1,6 +1,3 @@
-### example
-GET http://localhost:1234/
-
 ### recover all movies
 GET http://localhost:1234/movies
 
