@@ -1,12 +1,13 @@
 const express = require('express');
 const crypto = require('node:crypto');
 const moviesData = require('./movies.json');
+const cors = require('cors');
 const { validateMovie, validatePartialMovie } = require('./movies');
 
 const app = express();
 
 app.disable('x-powered-by');
-
+app.use(cors());
 app.use(express.json());
 
 /**
