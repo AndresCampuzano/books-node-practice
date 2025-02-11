@@ -1,0 +1,42 @@
+### example
+GET http://localhost:1234/
+
+### recover all movies
+GET http://localhost:1234/movies
+
+### recover movie by id
+GET http://localhost:1234/movies/c8a7d63f-3b04-44d3-9d95-8782fd7dcfaf
+
+### recover movie by genre
+GET http://localhost:1234/movies?genre=crime
+
+### recover movie by search
+GET http://localhost:1234/movies?search=christophER Nolan
+
+### create movie - (rate is optional)
+POST http://localhost:1234/movies
+Content-Type: application/json
+
+{
+    "title": "The Godfather",
+    "year": "1901",
+    "director": "Francis Ford Coppola",
+    "duration": 175,
+    "poster": "https://img.fruugo.com/product/4/49/14441494_max.jpg",
+    "genre": [
+        "Crime",
+        "Drama"
+    ]
+}
+
+### partially update a movie
+PATCH http://localhost:1234/movies/dcdd0fad-a94c-4810-8acc-5f108d3b18c3
+Content-Type: application/json
+
+{
+    "title": "TEST andres"
+}
+
+
+### delete a movie
+DELETE http://localhost:1234/movies/dcdd0fad-a94c-4810-8acc-5f108d3b18c3
