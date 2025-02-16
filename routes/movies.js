@@ -1,10 +1,7 @@
 import { Router } from 'express';
 
 import { validateMovie, validatePartialMovie } from '../schemas/movies.js';
-import { readJSON } from "../utils.js";
 import { MovieModel } from "../models /movie.js";
-
-const moviesData = readJSON('./data/movies.json');
 
 export const moviesRouter = Router();
 
@@ -12,13 +9,12 @@ export const moviesRouter = Router();
  * get all movies with optional query parameters
  */
 moviesRouter.get('/', async (req, res) => {
-    const { genre, search } = req.query;
-
     try {
+        const { genre, search } = req.query;
         const result = await MovieModel.getAll({ genre, search });
         res.json(result);
     } catch (error) {
-        res.status(404).json({ message: error.message });
+        res.status(500).json({ message: error.message });
     }
 });
 

@@ -1,7 +1,6 @@
-import {randomUUID} from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 
-import {readJSON} from "../utils.js";
-import {validateMovie, validatePartialMovie} from "../schemas/movies.js";
+import { readJSON } from "../utils.js";
 
 const moviesData = readJSON('./data/movies.json');
 
