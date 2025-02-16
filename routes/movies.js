@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 import { validateMovie, validatePartialMovie } from '../schemas/movies.js';
 import { readJSON } from "../utils.js";
-import { MovieModel } from "../controllers/movie.js";
+import { MovieModel } from "../models /movie.js";
 
 const moviesData = readJSON('./data/movies.json');
 
