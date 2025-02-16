@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { randomUUID } from 'node:crypto';
 
 import { validateMovie, validatePartialMovie } from '../schemas/movies.js';
 import { readJSON } from "../utils.js";
+import { MovieModel } from "../controllers/movie.js";
 
 const moviesData = readJSON('./data/movies.json');
 
@@ -11,90 +11,78 @@ export const moviesRouter = Router();
 /**
  * get all movies with optional query parameters
  */
-moviesRouter.get('/', (req, res) => {
+moviesRouter.get('/', async (req, res) => {
     const { genre, search } = req.query;
 
-    if (genre) {
-        const filteredMovies = moviesData.filter(movie => movie.genre.some(g => g.toLowerCase() === genre.toLowerCase()));
-        return res.json(filteredMovies);
+    try {
+        const result = await MovieModel.getAll({ genre, search });
+        res.json(result);
+    } catch (error) {
+        res.status(404).json({ message: error.message });
     }
-
-    if (search) {
-        const filteredMovies = moviesData.filter(movie =>
-            movie.title.toLowerCase().includes(search.toLowerCase()) ||
-            movie.director.toLowerCase().includes(search.toLowerCase()) ||
-            movie.genre.join().toLowerCase().includes(search.toLowerCase())
-        );
-        return res.json(filteredMovies);
-    }
-    res.json(moviesData);
 });
 
 /**
  * get movie by id
  */
-moviesRouter.get('/:id', (req, res) => {
+moviesRouter.get('/:id', async (req, res) => {
     const id = req.params.id;
-    const movie = moviesData.find(movie => movie.id === id);
-    if (!movie) {
-        return res.status(404).json({ message: 'Movie not found' });
+
+    try {
+        const result = await MovieModel.getById({ id });
+        res.json(result);
+    } catch (error) {
+        res.status(404).json({ message: error.message });
     }
-    res.json(movie);
 });
 
 /**
  * create movie
  */
-moviesRouter.post('/', (req, res) => {
-    const result = validateMovie(req.body);
+moviesRouter.post('/', async (req, res) => {
+    const validation = validateMovie(req.body);
 
-    if (result.error) {
-        return res.status(400).json({ errors: JSON.parse(result.error.message) });
+    if (validation.error) {
+        return res.status(400).json({ message: JSON.parse(validation.error.message) });
     }
-
-    const newMovie = {
-        id: randomUUID(),
-        ...result.data,
-    };
-
-    res.status(201).json(newMovie);
+    try {
+        const result = await MovieModel.create({ movie: validation.data });
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ message: JSON.parse(error.message) });
+    }
 });
 
 /**
  * update partially a movie
  */
-moviesRouter.patch('/:id', (req, res) => {
+moviesRouter.patch('/:id', async (req, res) => {
     const id = req.params.id;
-    const movie = moviesData.find(movie => movie.id === id);
 
-    if (!movie) {
-        return res.status(404).json({ message: 'Movie not found' });
+    const validation = validatePartialMovie(req.body);
+
+    if (validation.error) {
+        return res.status(400).json({ message: JSON.parse(validation.error.message) });
     }
 
-    const result = validatePartialMovie(req.body);
-
-    if (result.error) {
-        return res.status(400).json({ errors: JSON.parse(result.error.message) });
+    try {
+        const result = await MovieModel.update({ id, partialMovie: validation.data });
+        res.json(result);
+    } catch (error) {
+        res.status(404).json({ message: JSON.parse(error.message) });
     }
-
-    const updatedMovie = {
-        ...movie,
-        ...result.data,
-    };
-
-    res.json(updatedMovie);
 });
 
 /**
  * delete a movie
  */
-moviesRouter.delete('/:id', (req, res) => {
+moviesRouter.delete('/:id', async(req, res) => {
     const id = req.params.id;
-    const movie = moviesData.find(movie => movie.id === id);
 
-    if (!movie) {
-        return res.status(404).json({ message: 'Movie not found' });
+    try {
+        const result = await MovieModel.delete({ id });
+        res.json(result);
+    } catch (error) {
+        res.status(404).json({ message: error.message });
     }
-
-    res.json({ message: 'Movie deleted' });
 });

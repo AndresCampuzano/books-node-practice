@@ -9,9 +9,9 @@ const movieSchema = z.object({
         required_error: 'year is required',
         invalid_type_error: 'year must be a number'
     }).min(1900, {
-        message: 'year must be greater than 1900'
+        message: 'year must be greater or equal than 1900'
     }).max(new Date().getFullYear(), {
-        message: `year must be less than ${new Date().getFullYear()}`
+        message: `year must be less or equal than ${new Date().getFullYear()}`
     }).int({
         message: 'year must be an integer'
     }),
@@ -24,7 +24,7 @@ const movieSchema = z.object({
     }).int({
         message: 'duration must be an integer'
     }).max(500, {
-        message: 'duration must be less than 500'
+        message: 'duration must be less or equal than 500'
     }),
     poster: z.string().url({
         message: 'poster must be a valid URL starting with https://'
