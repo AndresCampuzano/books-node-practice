@@ -1,8 +1,6 @@
 import { Router } from 'express';
 
-import { validatePartialMovie } from '../schemas/movies.js';
-import { MovieModel } from "../models/movie.js";
-import {MovieController} from "../controllers/movies.js";
+import { MovieController } from "../controllers/movies.js";
 
 export const moviesRouter = Router();
 
