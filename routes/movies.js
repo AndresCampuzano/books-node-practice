@@ -1,30 +1,36 @@
 import { Router } from 'express';
-
+// import { MovieModel } from "../models/movie.js";
 import { MovieController } from "../controllers/movies.js";
 
-export const moviesRouter = Router();
+export const createMovieRouter = ({ movieModel }) => {
+    const moviesRouter = Router();
 
-/**
- * get all movies with optional query parameters
- */
-moviesRouter.get('/', MovieController.getAll);
+    const movieController = new MovieController({ movieModel });
 
-/**
- * get movie by id
- */
-moviesRouter.get('/:id', MovieController.getById);
+    /**
+     * get all movies with optional query parameters
+     */
+    moviesRouter.get('/', movieController.getAll);
 
-/**
- * create movie
- */
-moviesRouter.post('/', MovieController.create);
+    /**
+     * get movie by id
+     */
+    moviesRouter.get('/:id', movieController.getById);
 
-/**
- * update partially a movie
- */
-moviesRouter.patch('/:id', MovieController.update);
+    /**
+     * create movie
+     */
+    moviesRouter.post('/', movieController.create);
 
-/**
- * delete a movie
- */
-moviesRouter.delete('/:id', MovieController.delete);
+    /**
+     * update partially a movie
+     */
+    moviesRouter.patch('/:id', movieController.update);
+
+    /**
+     * delete a movie
+     */
+    moviesRouter.delete('/:id', movieController.delete);
+
+    return moviesRouter;
+};

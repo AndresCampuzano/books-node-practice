@@ -1,65 +1,189 @@
-import { randomUUID } from 'node:crypto';
+import pg from "pg";
 
-import { readJSON } from "../utils.js";
+const { Pool } = pg;
 
-const moviesData = readJSON('./data/movies.json');
+const pool = new Pool({
+
+});
 
 export class MovieModel {
     static async getAll({ genre, search }) {
+        let query = `
+            SELECT m.id,
+                   m.title,
+                   m.year,
+                   m.director,
+                   m.duration,
+                   m.poster,
+                   m.rate,
+                   array_agg(g.name) AS genres
+            FROM movie m
+                     JOIN movie_genres mg ON m.id = mg.movie_id
+                     JOIN genre g ON mg.genre_id = g.id
+        `;
+
+        const queryParams = [];
+        const conditions = [];
+
         if (genre) {
-            return await moviesData.filter(movie => movie.genre.some(g => g.toLowerCase() === genre.toLowerCase()));
+            queryParams.push(`%${genre}%`);
+            conditions.push(`m.id IN (
+            SELECT m.id
+            FROM movie m
+            JOIN movie_genres mg ON m.id = mg.movie_id
+            JOIN genre g ON mg.genre_id = g.id
+            WHERE g.name ILIKE $${queryParams.length}
+        )`);
         }
+
         if (search) {
-            return await moviesData.filter(movie =>
-                movie.title.toLowerCase().includes(search.toLowerCase()) ||
-                movie.director.toLowerCase().includes(search.toLowerCase()) ||
-                movie.genre.join().toLowerCase().includes(search.toLowerCase())
-            );
+            queryParams.push(`%${search}%`, `%${search}%`);
+            conditions.push(`(m.title ILIKE $${queryParams.length - 1} OR m.director ILIKE $${queryParams.length})`);
         }
-        return moviesData;
+
+        if (conditions.length > 0) {
+            query += ` WHERE ${conditions.join(' AND ')}`;
+        }
+
+        query += ` GROUP BY m.id`;
+
+        const { rows } = await pool.query(query, queryParams);
+        return rows;
     }
 
     static async getById({ id }) {
-        const movie = await moviesData.find(movie => movie.id === id);
+        const { rows } = await pool.query(`
+            SELECT m.id, m.title, m.year, m.director, m.duration, m.poster, m.rate, array_agg(g.name) AS genres
+            FROM movie m
+            JOIN movie_genres mg ON m.id = mg.movie_id
+            JOIN genre g ON mg.genre_id = g.id
+            WHERE m.id = $1
+            GROUP BY m.id, m.title, m.year, m.director, m.duration, m.poster, m.rate;
+        `, [id]);
 
-        if (!movie) {
-            throw new Error('Movie not found');
+        if (rows.length === 0) {
+            return null;
         }
 
-        return movie;
+        return rows[0];
     }
 
     static async create({ movie }) {
-        return {
-            id: randomUUID(),
-            ...movie,
-        };
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            // Insert movie
+            const { rows } = await client.query(`
+                INSERT INTO movie (title, year, director, duration, poster, rate)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING id;
+            `, [movie.title, movie.year, movie.director, movie.duration, movie.poster, movie.rate]);
+
+            const movieId = rows[0].id;
+
+            // Insert genres
+            for (const genre of movie.genre) {
+                const genreResult = await client.query(`
+                    SELECT id FROM genre WHERE name = $1;
+                `, [genre]);
+
+                if (genreResult.rows.length === 0) {
+                    throw new Error(`Genre '${genre}' does not exist`);
+                }
+
+                const genreId = genreResult.rows[0].id;
+
+                // Insert movie_genres
+                await client.query(`
+                    INSERT INTO movie_genres (movie_id, genre_id)
+                    VALUES ($1, $2);
+                `, [movieId, genreId]);
+            }
+
+            await client.query('COMMIT');
+
+            return { id: movieId };
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw new Error('Error creating movie');
+        } finally {
+            client.release();
+        }
     }
 
     static async update({ id, partialMovie }) {
-        const index = moviesData.findIndex(movie => movie.id === id);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
 
-        if (index === -1) {
-            throw new Error('Movie not found');
+            const { rows } = await client.query(`
+                SELECT id FROM movie WHERE id = $1;
+            `, [id]);
+
+            if (rows.length === 0) {
+                throw new Error('Movie not found');
+            }
+
+            const movie = rows[0];
+
+            const movieUpdate = {
+                title: partialMovie.title ?? movie.title,
+                year: partialMovie.year ?? movie.year,
+                director: partialMovie.director ?? movie.director,
+                duration: partialMovie.duration ?? movie.duration,
+                poster: partialMovie.poster ?? movie.poster,
+                rate: partialMovie.rate ?? movie.rate
+            };
+
+            await client.query(`
+                UPDATE movie
+                SET title = $1, year = $2, director = $3, duration = $4, poster = $5, rate = $6
+                WHERE id = $7;
+            `, [movieUpdate.title, movieUpdate.year, movieUpdate.director, movieUpdate.duration, movieUpdate.poster, movieUpdate.rate, id]);
+
+            if (partialMovie.genre) {
+                await client.query(`
+                    DELETE FROM movie_genres WHERE movie_id = $1;
+                `, [id]);
+
+                for (const genre of partialMovie.genre) {
+                    const genreResult = await client.query(`
+                        SELECT id FROM genre WHERE name = $1;
+                    `, [genre]);
+
+                    if (genreResult.rows.length === 0) {
+                        throw new Error(`Genre '${genre}' does not exist`);
+                    }
+
+                    const genreId = genreResult.rows[0].id;
+
+                    // Insert movie_genres
+                    await client.query(`
+                        INSERT INTO movie_genres (movie_id, genre_id)
+                        VALUES ($1, $2);
+                    `, [id, genreId]);
+                }
+            }
+
+            await client.query('COMMIT');
+
+            return { id };
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw new Error('Error updating movie');
+        } finally {
+            client.release();
         }
-
-        moviesData[index] = {
-            ...moviesData[index],
-            ...partialMovie,
-        };
-
-        return moviesData[index];
     }
 
     static async delete({ id }) {
-        const index = moviesData.findIndex(movie => movie.id === id);
+        const { rows } = await pool.query(`
+            DELETE FROM movie
+            WHERE id = $1
+            RETURNING id;
+        `, [id]);
 
-        if (index === -1) {
-            throw new Error('Movie not found');
-        }
-
-        moviesData.splice(index, 1);
-
-        return { message: 'Movie deleted successfully' };
+        return rows[0];
     }
 }

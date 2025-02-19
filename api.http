@@ -2,13 +2,16 @@
 GET http://localhost:1234/movies
 
 ### recover movie by id
-GET http://localhost:1234/movies/dcdd0fad-a94c-4810-8acc-5f108d3b18c3
+GET http://localhost:1234/movies/4e152ba8-15c3-4570-a0b7-f794125e0a60
 
 ### recover movie by genre
-GET http://localhost:1234/movies?genre=crime
+GET http://localhost:1234/movies?genre=Crime
 
 ### recover movie by search
 GET http://localhost:1234/movies?search=christophER Nolan
+
+### recover movie by search + genre
+GET http://localhost:1234/movies?search=christophER Nolan&genre=Sci-Fi
 
 ### create movie - (rate is optional)
 POST http://localhost:1234/movies
@@ -36,4 +39,4 @@ Content-Type: application/json
 
 
 ### delete a movie
-DELETE http://localhost:1234/movies/c8a7d63f-3b04-44d3-9d95-8782fd7dcfaf
+DELETE http://localhost:1234/movies/3de1a888-d6ea-4da1-9f6d-925eea0d29ce
