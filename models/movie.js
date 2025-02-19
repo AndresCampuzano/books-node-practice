@@ -125,7 +125,7 @@ export class MovieModel {
             await client.query('BEGIN');
 
             const { rows } = await client.query(`
-                SELECT id FROM movie WHERE id = $1;
+                SELECT * FROM movie WHERE id = $1;
             `, [id]);
 
             if (rows.length === 0) {
